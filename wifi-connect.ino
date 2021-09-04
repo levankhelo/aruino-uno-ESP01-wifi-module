@@ -21,7 +21,7 @@ void setup() {
     delay(100);
     wifiserial.println("AT+CWLAP"); // list all available wifis
     delay(300);
-    wifiserial.println("AT+CWJAP=\"SSID\",\"PASSWORD\""); //login on wifi
+    wifiserial.println("AT+CWJAP=\"SSID\",\"Password\""); //login on wifi
     delay(300);
     wifiserial.println("AT+CIFSR"); //display IP
 
@@ -32,18 +32,38 @@ void setup() {
 
 }
 
+void Send( String str ) {
+    Serial.println( "Sending: " + str ); 
+    wifiserial.println( "Sending: " + str ); 
+}
+
+String data = "";
+void Capture( char c ) {
+    data += c;
+    if( c == '\n' ) {
+        Send( data );
+        data = "";
+    }
+}
+
 void loop() {
 
   // listen for communication from the ESP8266 and then write it to the serial monitor
 
   if ( wifiserial.available() ) { 
-    Serial.write( wifiserial.read() ); 
+    char c = wifiserial.read();
+    Capture( c );
+    // Serial.write( c ); 
   }
 
   // listen for user input and send it to the ESP8266
 
   if ( Serial.available() ) { 
-    wifiserial.write( Serial.read() ); 
+    char c = Serial.read();
+    Capture( c );
+    // wifiserial.write( c ); 
   }
+
+  
 
 }
