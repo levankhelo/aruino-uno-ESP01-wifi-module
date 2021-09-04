@@ -1,48 +1,61 @@
 #include <SoftwareSerial.h>
 
-SoftwareSerial wifiSerial(2, 3);      // RX, TX for ESP8266
+SoftwareSerial wifiSerial(0, 1);      // RX, TX for ESP8266
 
 bool DEBUG = true;   //show more logs
 int responseTime = 10; //communication timeout
-long SerialMonitorAddress = 9600; // 115200
 
 void setup()
 {
   
   // Open serial communications and wait for port to open esp8266:
-  Serial.begin(SerialMonitorAddress);
-  while (!Serial) { ; } // wait for serial port to connect. Needed for Leonardo only
-  wifiSerial.begin(SerialMonitorAddress);
+  Serial.begin(115200);
+  // while (!Serial) { ; } // wait for serial port to connect. Needed for Leonardo only
+  wifiSerial.begin(115200);
 
 
-  while ( !wifiSerial ) { ; } // wait for serial port to connect. Needed for Leonardo only
+  // while ( !wifiSerial ) { ; } // wait for serial port to connect. Needed for Leonardo only
 
   sendToWifi("AT+CWMODE=2", responseTime, DEBUG); // configure as access point
   sendToWifi("AT+CIFSR", responseTime, DEBUG); // get ip address
   sendToWifi("AT+CIPMUX=1", responseTime, DEBUG); // configure for multiple connections
   sendToWifi("AT+CIPSERVER=1,80", responseTime, DEBUG); // turn on server on port 80
  
-  sendToUno("Wifi connection is running!",responseTime,DEBUG);
+  sendToUno("Wifi connection is running!", responseTime, DEBUG);
   
 
 }
 
+void blink() {
+  delay(100);
+  // digitalWrite(13,HIGH);
+  delay(100);
+  // digitalWrite(13,LOW);
+}
+
 
 void loop() {
-  digitalWrite(13,HIGH);
+  
+   
 
   if( Serial.available() > 0 ){
     String message = readSerialMessage();
+    wifiSerial.println( "WiFi-received:"+message  );
+    Serial.println( "Serial-received:"+message  );
     if( find(message, "test:")) {
 
       String result = sendToWifi( message.substring(13, message.length()), responseTime, DEBUG );
+
+      sendToUno("uno-loop:"+message, responseTime, DEBUG);
       
       if( find(result, "OK") ) sendData("\nOK");
       else sendData("\nEr");
     }
   }
 
-  if( wifiSerial.available() > 0 ) {
+  // blink();
+
+  if( wifiSerial.available() > 0 ) {    
   
       String message = readWifiSerialMessage();
     
@@ -53,17 +66,20 @@ void loop() {
       if(find(result,"OK")) sendData("\n"+result);
       else sendData("\nErrRead");                //At command ERROR CODE for Failed Executing statement
 
-    } else if( find(message, "HELLO") ) {  //receives HELLO from wifi
+    } else if( find(message, "hi") ) {  //receives HELLO from wifi
       
       sendData("\\nHI!");    //arduino says HI
 
-    } else if( find( message, "ledon" ) ) {
-      
+    } else if( find( message, "on" ) ) {
+
+
+      sendToUno("uno-on:"+message, responseTime, DEBUG);
       //turn on built in LED:
       digitalWrite(13,HIGH);
 
-    } else if( find(message,"ledoff") ){
-      
+    } else if( find(message,"off") ){
+
+      sendToUno("uno-off:"+message, responseTime, DEBUG);
       //turn off built in LED:
       digitalWrite(13,LOW);
 
@@ -73,6 +89,8 @@ void loop() {
     }
   }
   delay(responseTime);
+
+  
 
 }
 
@@ -84,6 +102,8 @@ void loop() {
 * Returns: void
 */
 void sendData( String str ) {
+
+  wifiSerial.println( str );
   
   String len="";
   len+=str.length();
